@@ -10,12 +10,19 @@
  * The original work may be under copyrights. 
  */
 
-#include <cv.h>	
+#include <cv.h>
 #include <highgui.h>
 #include <iostream>
-
+#include <armadillo>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <stdlib.h>
+#include <stdio.h>
 using namespace std;
 using namespace cv;
+using namespace arma;
 
 /*
  * Parameters : complete path to the two image to be compared
@@ -27,125 +34,172 @@ int main(int argc, char** argv)
 		return -1;
 	
 	// default settings
-	double C1 = 6.5025, C2 = 58.5225;
+	double C1 = 6.5025, C2 = 58.5225, C3 = 0.00000681;
 
-	IplImage
-		*img1=NULL, *img2=NULL, *img1_img2=NULL,
-		*img1_temp=NULL, *img2_temp=NULL,
-		*img1_sq=NULL, *img2_sq=NULL,
-		*mu1=NULL, *mu2=NULL,
-		*mu1_sq=NULL, *mu2_sq=NULL, *mu1_mu2=NULL,
-		*sigma1_sq=NULL, *sigma2_sq=NULL, *sigma12=NULL,
-		*ssim_map=NULL, *temp1=NULL, *temp2=NULL, *temp3=NULL;
+	cv::Mat kernel = (Mat_<float>(1,11) <<  0.00102818599752740, 0.00759732401586496, 0.03599397767545871, 0.10934004978399577, 0.21296533701490150, 0.26596152026762182, 0.21296533701490150, 0.10934004978399577, 0.03599397767545871, 0.00759732401586496, 0.00102818599752740);
+
+	Point anchor;
+	anchor = Point( -1, -1 );
+	double delta = 0;
 	
-
 	/***************************** INITS **********************************/
-	img1_temp = cvLoadImage(argv[1]);
-	img2_temp = cvLoadImage(argv[2]);
+	cv::Mat img1_temp = imread(argv[1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+	cv::Mat img2_temp = imread(argv[2]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
 
-	if(img1_temp==NULL || img2_temp==NULL)
-		return -1;
+	//if(img1_temp==NULL || img2_temp==NULL)
+	//	return -1;
 
-	int x=img1_temp->width, y=img1_temp->height;
-	int nChan=img1_temp->nChannels, d=IPL_DEPTH_32F;
-	CvSize size = cvSize(x, y);
-
-	img1 = cvCreateImage( size, d, nChan);
-	img2 = cvCreateImage( size, d, nChan);
-
-	cvConvert(img1_temp, img1);
-	cvConvert(img2_temp, img2);
-	cvReleaseImage(&img1_temp);
-	cvReleaseImage(&img2_temp);
-
+	int x=img1_temp.rows, y=img1_temp.cols;
+	int nChan=img1_temp.channels()-2, d=CV_32FC1;
+		
+	cv::Mat img1_1 = cv::Mat( Size(x,y), CV_32FC3);
+	cv::Mat img2_2 = cv::Mat( Size(x,y), CV_32FC3);
+	cv::Mat img1_1_1 = cv::Mat( Size(x,y), CV_32FC3);
+	cv::Mat img2_2_2 = cv::Mat( Size(x,y), CV_32FC3);
 	
-	img1_sq = cvCreateImage( size, d, nChan);
-	img2_sq = cvCreateImage( size, d, nChan);
-	img1_img2 = cvCreateImage( size, d, nChan);
+	img1_temp.convertTo(img1_1, CV_32FC1);
+	img2_temp.convertTo(img2_2, CV_32FC1);
+        
+	cvtColor(img1_1, img1_1_1, CV_BGR2GRAY, 1);
+        cvtColor(img2_2, img2_2_2, CV_BGR2GRAY, 1);
+
+	add( img1_1_1, Scalar(C3), img1_1_1 );
+	add( img2_2_2, Scalar(C3), img2_2_2 );
 	
-	cvPow( img1, img1_sq, 2 );
-	cvPow( img2, img2_sq, 2 );
-	cvMul( img1, img2, img1_img2, 1 );
+	cv::Mat img1_sq = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat img2_sq = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat img1_img2 = cv::Mat( Size(x,y), CV_32FC1);
 
-	mu1 = cvCreateImage( size, d, nChan);
-	mu2 = cvCreateImage( size, d, nChan);
+	cv::Mat img1_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat img2_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat img1_1_1_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat img2_2_2_trans = cv::Mat( Size(y,x), CV_32FC1);
 
-	mu1_sq = cvCreateImage( size, d, nChan);
-	mu2_sq = cvCreateImage( size, d, nChan);
-	mu1_mu2 = cvCreateImage( size, d, nChan);
+	transpose(img1_1_1, img1_1_1_trans);
+	transpose(img2_2_2, img2_2_2_trans);
+	arma::fmat imagine1_arma(img1_1_1_trans.ptr<float>(), img1_temp.rows, img1_temp.cols, true, false);
+	arma::fmat imagine2_arma(img2_2_2_trans.ptr<float>(), img2_temp.rows, img2_temp.cols, true, false);
+	arma::fmat imagine1_arma_floor = floor(imagine1_arma);
+	arma::fmat imagine2_arma_floor = floor(imagine2_arma);
+
+	cv::Mat img1_from_arma(1920, 1080, CV_32FC1, imagine1_arma_floor.memptr());
+	cv::Mat img1(img1_from_arma.t());
+	cv::Mat img2_from_arma(1920, 1080, CV_32FC1, imagine2_arma_floor.memptr());
+	cv::Mat img2(img2_from_arma.t());
 	
+	transpose(img1, img1_trans);
+	transpose(img2, img2_trans);
+	
+	pow( img1, 2, img1_sq);
+	pow( img2, 2, img2_sq);
+	multiply( img1, img2, img1_img2, 1, CV_32FC1 );
 
-	sigma1_sq = cvCreateImage( size, d, nChan);
-	sigma2_sq = cvCreateImage( size, d, nChan);
-	sigma12 = cvCreateImage( size, d, nChan);
+	cv::Mat mu1 = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat mu2 = cv::Mat( Size(x,y), CV_32FC1);
 
-	temp1 = cvCreateImage( size, d, nChan);
-	temp2 = cvCreateImage( size, d, nChan);
-	temp3 = cvCreateImage( size, d, nChan);
+	cv::Mat mu1_sq( Size(x,y), CV_32FC1);
+	cv::Mat mu2_sq( Size(x,y), CV_32FC1);
+	cv::Mat mu1_mu2( Size(x,y), CV_32FC1);
+	
+	cv::Mat sigma1_sq = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat sigma2_sq = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat sigma1_sq_inter = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat sigma2_sq_inter = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat sigma12 = cv::Mat( Size(x,y), CV_32FC1);
 
-	ssim_map = cvCreateImage( size, d, nChan);
+	cv::Mat temp1 = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat temp2 = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat temp3 = cv::Mat( Size(x,y), CV_32FC1);
+
+	cv::Mat mu1_inter = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat mu2_inter = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat img1_sq_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat img2_sq_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat img1_img2_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat sigma12_inter = cv::Mat( Size(x,y), CV_32FC1);
+	cv::Mat sigma12_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat sigma1_sq_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat sigma2_sq_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat sigma1_sq_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat mu2_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
+	
+	cv::Mat mu1_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
+	cv::Mat ssim_map = cv::Mat( Size(x,y), CV_32FC1);
+	
+	transpose(img1_sq, img1_sq_trans);
+	transpose(img2_sq, img2_sq_trans);
+	transpose(img1_img2, img1_img2_trans);
+	
 	/*************************** END INITS **********************************/
 
 
 	//////////////////////////////////////////////////////////////////////////
 	// PRELIMINARY COMPUTING
-	cvSmooth( img1, mu1, CV_GAUSSIAN, 11, 11, 1.5 );
-	cvSmooth( img2, mu2, CV_GAUSSIAN, 11, 11, 1.5 );
+
+	filter2D(img1_trans, mu1_inter_trans, CV_32FC1, kernel, anchor, delta, BORDER_REFLECT );
+	transpose(mu1_inter_trans, mu1_inter);
+	filter2D(mu1_inter, mu1, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
+		
+	filter2D(img2_trans, mu2_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
+	transpose(mu2_inter_trans, mu2_inter);
+	filter2D(mu2_inter, mu2, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
 	
-	cvPow( mu1, mu1_sq, 2 );
-	cvPow( mu2, mu2_sq, 2 );
-	cvMul( mu1, mu2, mu1_mu2, 1 );
-
-
-	cvSmooth( img1_sq, sigma1_sq, CV_GAUSSIAN, 11, 11, 1.5 );
-	cvAddWeighted( sigma1_sq, 1, mu1_sq, -1, 0, sigma1_sq );
+	pow( mu1, 2, mu1_sq );
+	pow( mu2, 2, mu2_sq );
+	multiply( mu1, mu2, mu1_mu2, 1, CV_32FC1 );
 	
-	cvSmooth( img2_sq, sigma2_sq, CV_GAUSSIAN, 11, 11, 1.5 );
-	cvAddWeighted( sigma2_sq, 1, mu2_sq, -1, 0, sigma2_sq );
-
-	cvSmooth( img1_img2, sigma12, CV_GAUSSIAN, 11, 11, 1.5 );
-	cvAddWeighted( sigma12, 1, mu1_mu2, -1, 0, sigma12 );
+	filter2D(img1_sq_trans, sigma1_sq_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
+	transpose(sigma1_sq_inter_trans, sigma1_sq_inter);
+	filter2D(sigma1_sq_inter, sigma1_sq, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
+	addWeighted( sigma1_sq, 1, mu1_sq, -1, 0, sigma1_sq, CV_32FC1 );
+	
+	filter2D(img2_sq_trans, sigma2_sq_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
+	transpose(sigma2_sq_inter_trans, sigma2_sq_inter);
+	filter2D(sigma2_sq_inter, sigma2_sq, CV_32FC1, kernel, anchor, delta, BORDER_REFLECT );
+	addWeighted( sigma2_sq, 1, mu2_sq, -1, 0, sigma2_sq, CV_32FC1 );
+	
+	filter2D(img1_img2_trans, sigma12_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
+	transpose(sigma12_inter_trans, sigma12_inter);
+	filter2D(sigma12_inter, sigma12, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
+	addWeighted( sigma12, 1, mu1_mu2, -1, 0, sigma12, CV_32FC1 );
 	
 
 	//////////////////////////////////////////////////////////////////////////
 	// FORMULA
-
+	
 	// (2*mu1_mu2 + C1)
-	cvScale( mu1_mu2, temp1, 2 );
-	cvAddS( temp1, cvScalarAll(C1), temp1 );
-
+	mu1_mu2.convertTo(temp1, CV_32FC1, 2);
+	add( temp1, Scalar(C1), temp1, noArray(), CV_32FC1 );
+	
 	// (2*sigma12 + C2)
-	cvScale( sigma12, temp2, 2 );
-	cvAddS( temp2, cvScalarAll(C2), temp2 );
-
+	sigma12.convertTo(temp2, CV_32FC1, 2);
+	add( temp2, Scalar(C2), temp2, noArray(), CV_32FC1 );
+	
 	// ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
-	cvMul( temp1, temp2, temp3, 1 );
+	multiply( temp1, temp2, temp3, 1, CV_32FC1 );
 
 	// (mu1_sq + mu2_sq + C1)
-	cvAdd( mu1_sq, mu2_sq, temp1 );
-	cvAddS( temp1, cvScalarAll(C1), temp1 );
-
+	add( mu1_sq, mu2_sq, temp1, noArray(), CV_32FC1 );
+	add( temp1, Scalar(C1), temp1, noArray(), CV_32FC1 );
+	
 	// (sigma1_sq + sigma2_sq + C2)
-	cvAdd( sigma1_sq, sigma2_sq, temp2 );
-	cvAddS( temp2, cvScalarAll(C2), temp2 );
-
+	add( sigma1_sq, sigma2_sq, temp2, noArray(), CV_32FC1 );
+	add( temp2, Scalar(C2), temp2, noArray(), CV_32FC1 );
+	
 	// ((mu1_sq + mu2_sq + C1).*(sigma1_sq + sigma2_sq + C2))
-	cvMul( temp1, temp2, temp1, 1 );
-
+	multiply( temp1, temp2, temp1, 1, CV_32FC1 );
+	
 	// ((2*mu1_mu2 + C1).*(2*sigma12 + C2))./((mu1_sq + mu2_sq + C1).*(sigma1_sq + sigma2_sq + C2))
-	cvDiv( temp3, temp1, ssim_map, 1 );
-
-
-	CvScalar index_scalar = cvAvg( ssim_map );
+	divide( temp3, temp1, ssim_map, 1, CV_32FC1);
+	
+	Scalar index_scalar = mean( ssim_map, noArray() );
 	
 	// through observation, there is approximately 
-	// 1% error max with the original matlab program
+	// 0,00085% error comparing with the original program
 
-	cout << "(R, G & B SSIM index)" << endl ;
-	cout << index_scalar.val[2] * 100 << "%" << endl ;
-	cout << index_scalar.val[1] * 100 << "%" << endl ;
-	cout << index_scalar.val[0] * 100 << "%" << endl ;
-
+	cout.setf(std::ios::fixed, std:: ios::floatfield);	
+	cout << setprecision(7) << index_scalar.val[0] << endl ;
+		
 	// if you use this code within a program
 	// don't forget to release the IplImages
 	return 0;
