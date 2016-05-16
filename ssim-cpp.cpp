@@ -20,6 +20,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/resource.h>
 using namespace std;
 using namespace cv;
 using namespace arma;
@@ -37,6 +38,7 @@ int main(int argc, char** argv)
 	double C1 = 6.5025, C2 = 58.5225, C3 = 0.00000681;
 
 	cv::Mat kernel = (Mat_<float>(1,11) <<  0.00102818599752740, 0.00759732401586496, 0.03599397767545871, 0.10934004978399577, 0.21296533701490150, 0.26596152026762182, 0.21296533701490150, 0.10934004978399577, 0.03599397767545871, 0.00759732401586496, 0.00102818599752740);
+	cv::Mat kernel1 = (Mat_<float>(11,1) <<  0.00102818599752740, 0.00759732401586496, 0.03599397767545871, 0.10934004978399577, 0.21296533701490150, 0.26596152026762182, 0.21296533701490150, 0.10934004978399577, 0.03599397767545871, 0.00759732401586496, 0.00102818599752740);
 
 	Point anchor;
 	anchor = Point( -1, -1 );
@@ -70,8 +72,6 @@ int main(int argc, char** argv)
 	cv::Mat img2_sq = cv::Mat( Size(x,y), CV_32FC1);
 	cv::Mat img1_img2 = cv::Mat( Size(x,y), CV_32FC1);
 
-	cv::Mat img1_trans = cv::Mat( Size(y,x), CV_32FC1);
-	cv::Mat img2_trans = cv::Mat( Size(y,x), CV_32FC1);
 	cv::Mat img1_1_1_trans = cv::Mat( Size(y,x), CV_32FC1);
 	cv::Mat img2_2_2_trans = cv::Mat( Size(y,x), CV_32FC1);
 
@@ -86,9 +86,6 @@ int main(int argc, char** argv)
 	cv::Mat img1(img1_from_arma.t());
 	cv::Mat img2_from_arma(1920, 1080, CV_32FC1, imagine2_arma_floor.memptr());
 	cv::Mat img2(img2_from_arma.t());
-	
-	transpose(img1, img1_trans);
-	transpose(img2, img2_trans);
 	
 	pow( img1, 2, img1_sq);
 	pow( img2, 2, img2_sq);
@@ -113,22 +110,8 @@ int main(int argc, char** argv)
 
 	cv::Mat mu1_inter = cv::Mat( Size(x,y), CV_32FC1);
 	cv::Mat mu2_inter = cv::Mat( Size(x,y), CV_32FC1);
-	cv::Mat img1_sq_trans = cv::Mat( Size(y,x), CV_32FC1);
-	cv::Mat img2_sq_trans = cv::Mat( Size(y,x), CV_32FC1);
-	cv::Mat img1_img2_trans = cv::Mat( Size(y,x), CV_32FC1);
 	cv::Mat sigma12_inter = cv::Mat( Size(x,y), CV_32FC1);
-	cv::Mat sigma12_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
-	cv::Mat sigma1_sq_trans = cv::Mat( Size(y,x), CV_32FC1);
-	cv::Mat sigma2_sq_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
-	cv::Mat sigma1_sq_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
-	cv::Mat mu2_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
-	
-	cv::Mat mu1_inter_trans = cv::Mat( Size(y,x), CV_32FC1);
 	cv::Mat ssim_map = cv::Mat( Size(x,y), CV_32FC1);
-	
-	transpose(img1_sq, img1_sq_trans);
-	transpose(img2_sq, img2_sq_trans);
-	transpose(img1_img2, img1_img2_trans);
 	
 	/*************************** END INITS **********************************/
 
@@ -136,30 +119,25 @@ int main(int argc, char** argv)
 	//////////////////////////////////////////////////////////////////////////
 	// PRELIMINARY COMPUTING
 
-	filter2D(img1_trans, mu1_inter_trans, CV_32FC1, kernel, anchor, delta, BORDER_REFLECT );
-	transpose(mu1_inter_trans, mu1_inter);
+	filter2D(img1, mu1_inter, CV_32FC1, kernel1, anchor, delta, BORDER_REFLECT );
 	filter2D(mu1_inter, mu1, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
-		
-	filter2D(img2_trans, mu2_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
-	transpose(mu2_inter_trans, mu2_inter);
+	
+	filter2D(img2, mu2_inter, CV_32FC1 , kernel1, anchor, delta, BORDER_REFLECT );	
 	filter2D(mu2_inter, mu2, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
 	
 	pow( mu1, 2, mu1_sq );
 	pow( mu2, 2, mu2_sq );
 	multiply( mu1, mu2, mu1_mu2, 1, CV_32FC1 );
 	
-	filter2D(img1_sq_trans, sigma1_sq_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
-	transpose(sigma1_sq_inter_trans, sigma1_sq_inter);
+	filter2D(img1_sq, sigma1_sq_inter, CV_32FC1 , kernel1, anchor, delta, BORDER_REFLECT );
 	filter2D(sigma1_sq_inter, sigma1_sq, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
 	addWeighted( sigma1_sq, 1, mu1_sq, -1, 0, sigma1_sq, CV_32FC1 );
-	
-	filter2D(img2_sq_trans, sigma2_sq_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
-	transpose(sigma2_sq_inter_trans, sigma2_sq_inter);
+
+	filter2D(img2_sq, sigma2_sq_inter, CV_32FC1 , kernel1, anchor, delta, BORDER_REFLECT );	
 	filter2D(sigma2_sq_inter, sigma2_sq, CV_32FC1, kernel, anchor, delta, BORDER_REFLECT );
 	addWeighted( sigma2_sq, 1, mu2_sq, -1, 0, sigma2_sq, CV_32FC1 );
 	
-	filter2D(img1_img2_trans, sigma12_inter_trans, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
-	transpose(sigma12_inter_trans, sigma12_inter);
+	filter2D(img1_img2, sigma12_inter, CV_32FC1 , kernel1, anchor, delta, BORDER_REFLECT );
 	filter2D(sigma12_inter, sigma12, CV_32FC1 , kernel, anchor, delta, BORDER_REFLECT );
 	addWeighted( sigma12, 1, mu1_mu2, -1, 0, sigma12, CV_32FC1 );
 	
