@@ -30,7 +30,7 @@ using namespace std;
 using namespace cv;
 using namespace arma;
 
-Scalar getMSSIM( /*const*/ cv::Mat& img1_temp, /*const*/ cv::Mat& img2_temp);
+Scalar getMSSIM( /*const*/ cv::Mat img1_temp, /*const*/ cv::Mat img2_temp);
 
 /*
  * Parameters : complete path to the two image to be compared
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-Scalar getMSSIM( cv::Mat& img1_temp, cv::Mat& img2_temp)
+Scalar getMSSIM( cv::Mat img1_temp, cv::Mat img2_temp)
 	{
 
 	double C1 = 6.5025, C2 = 58.5225, C3 = 0.00000681;
