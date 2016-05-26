@@ -76,9 +76,9 @@ Scalar getMSSIM( cv::Mat img1_temp, cv::Mat img2_temp)
 	arma::fmat imagine1_arma_floor = floor(imagine1_arma);
 	arma::fmat imagine2_arma_floor = floor(imagine2_arma);
 
-	cv::Mat img1_from_arma(1920, 1080, CV_32FC1, imagine1_arma_floor.memptr());
+	cv::Mat img1_from_arma(y, x, CV_32FC1, imagine1_arma_floor.memptr());
 	cv::Mat img1(img1_from_arma.t());
-	cv::Mat img2_from_arma(1920, 1080, CV_32FC1, imagine2_arma_floor.memptr());
+	cv::Mat img2_from_arma(y, x, CV_32FC1, imagine2_arma_floor.memptr());
 	cv::Mat img2(img2_from_arma.t());
 	
 	pow( img1, 2, img1_sq);
@@ -211,9 +211,9 @@ std::tuple < cv::Scalar, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, c
 	arma::fmat imagine1_arma_floor = floor(imagine1_arma);
 	arma::fmat imagine2_arma_floor = floor(imagine2_arma);
 
-	cv::Mat img1_from_arma(1920, 1080, CV_32FC1, imagine1_arma_floor.memptr());
+	cv::Mat img1_from_arma(y, x, CV_32FC1, imagine1_arma_floor.memptr());
 	cv::Mat img1(img1_from_arma.t());
-	cv::Mat img2_from_arma(1920, 1080, CV_32FC1, imagine2_arma_floor.memptr());
+	cv::Mat img2_from_arma(y, x, CV_32FC1, imagine2_arma_floor.memptr());
 	cv::Mat img2(img2_from_arma.t());
 	img1_extern = img1;
 	
@@ -322,7 +322,7 @@ std::tuple < cv::Scalar, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat >g
 	Point anchor;
 	anchor = Point( -1, -1 );
 	double delta = 0;
-	int x=1080, y=1920;
+	int x=img1_extern.rows, y=img1_extern.cols;
 			
 	cv::Mat img2_2 = cv::Mat( Size(x,y), CV_32FC3);
 	cv::Mat img2_2_2 = cv::Mat( Size(x,y), CV_32FC3);
@@ -343,7 +343,7 @@ std::tuple < cv::Scalar, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat >g
 	arma::fmat imagine2_arma(img2_2_2_trans.ptr<float>(), img2_temp.rows, img2_temp.cols, true, false);
 	arma::fmat imagine2_arma_floor = floor(imagine2_arma);
 
-	cv::Mat img2_from_arma(1920, 1080, CV_32FC1, imagine2_arma_floor.memptr());
+	cv::Mat img2_from_arma(y, x, CV_32FC1, imagine2_arma_floor.memptr());
 	cv::Mat img2(img2_from_arma.t());
 	
 	img1 = img1_extern;
@@ -461,8 +461,9 @@ int main(int argc, char** argv)
 	if(argc==2){
 	int i;
 	Scalar index;
-	cv::Mat img1 = cv::Mat( Size(1080,1920), CV_32FC3);
-	cv::Mat img1_extern = cv::Mat( Size(1080,1920), CV_32FC3);
+	int x=1080, y=1920;
+	cv::Mat img1 = cv::Mat( Size(x,y), CV_32FC3);
+	cv::Mat img1_extern = cv::Mat( Size(x,y), CV_32FC3);
 	cv::Mat img1_sq;
 	cv::Mat mu1;
 	cv::Mat mu1_sq;
@@ -477,7 +478,7 @@ int main(int argc, char** argv)
 	}
 	else cout << "Unable to open file";
 	
-	for (i = 0; i < 10000; i=i+2) {
+	for (i = 0; i < input.size(); i=i+2) {
 		if (i==0){	
 	cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
 	cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
