@@ -517,10 +517,10 @@ int main(int argc, char** argv)
 	output.push_back(input[i]);
 	output.push_back(input[i+1]);
 	output.push_back(to_string_with_precision(index.val[0], 7));
-	cout<< std::fixed << setprecision(0) << "Procesarea s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<endl;
+	std::cout << std::fixed << setprecision(0) << "Procesarea s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<"\r";
 	}
 	//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
-	ofstream writeFile("ciutacu");
+	ofstream writeFile(strcat(argv[1],"-calculat"));
 	if (writeFile.is_open())
   	{
 	//std::ostream_iterator<string> out_it (std::cout,"\n");
