@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <sys/resource.h>
 #include <tuple>
+#include <iomanip>
 using namespace std;
 using namespace cv;
 using namespace arma;
@@ -433,6 +434,14 @@ std::tuple < cv::Scalar, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat >g
 	return  make_tuple(index_scalar, img1_extern, img2_temp, img1_sq_extern, mu1_extern, mu1_sq_extern, sigma1_sq_extern);
 	}
 
+	template <typename T>
+	std::string to_string_with_precision(const T a_value, const int n = 7)
+	{
+    	std::ostringstream out;
+    	out << std::fixed << std::setprecision(n) << a_value;
+    	return out.str();
+}
+
 int main(int argc, char** argv)
 {
 	//if(argc!=3)
@@ -470,6 +479,7 @@ int main(int argc, char** argv)
 	cv::Mat sigma1_sq;
 	std::string name_previous_file;
 	vector<string> input;
+	vector<string> output;
 	ifstream readFile(argv[1]);
 	if (readFile.is_open()){
 	copy(istream_iterator<string>(readFile), {}, back_inserter(input));
@@ -501,11 +511,23 @@ int main(int argc, char** argv)
 	tie(index, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM2(index_scalar, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq);
 	
 	}
-
 	cout.setf(std::ios::fixed, std:: ios::floatfield);	
-	cout << input[i] << " " << input[i+1] << " " << setprecision(7) << index.val[0]<<endl ;
-	
+	//cout << input[i] << " " << input[i+1] << " " << setprecision(7) << index.val[0]<<endl ;
+
+	output.push_back(input[i]);
+	output.push_back(input[i+1]);
+	output.push_back(to_string_with_precision(index.val[0], 7));
+	cout<< std::fixed << setprecision(0) << "Procesarea s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<endl;
 	}
+	//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
+	ofstream writeFile("ciutacu");
+	if (writeFile.is_open())
+  	{
+	//std::ostream_iterator<string> out_it (std::cout,"\n");
+	copy(output.begin(), output.end(), ostream_iterator<string>(writeFile, "\n"));
+	writeFile.close();
+  	}
+	else cout << "Unable to open file";
 	}
 
 	return 0;
