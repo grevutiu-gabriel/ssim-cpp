@@ -15,6 +15,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <algorithm>
 #include <iterator>
@@ -513,17 +514,16 @@ int main(int argc, char** argv)
 	}
 	cout.setf(std::ios::fixed, std:: ios::floatfield);	
 	//cout << input[i] << " " << input[i+1] << " " << setprecision(7) << index.val[0]<<endl ;
-
-	output.push_back(input[i]);
-	output.push_back(input[i+1]);
-	output.push_back(to_string_with_precision(index.val[0], 7));
+	std::stringstream randul_intermediar;
+	randul_intermediar << input[i] <<" " << input[i+1] << " " << to_string_with_precision(index.val[0], 7);
+	std::string randul = randul_intermediar.str();
+	output.push_back(randul);
 	std::cout << std::fixed << setprecision(0) << "Procesarea s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<"\r";
 	}
 	//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
 	ofstream writeFile(strcat(argv[1],"-calculat"));
 	if (writeFile.is_open())
   	{
-	//std::ostream_iterator<string> out_it (std::cout,"\n");
 	copy(output.begin(), output.end(), ostream_iterator<string>(writeFile, "\n"));
 	writeFile.close();
   	}
