@@ -25,3 +25,7 @@ To execute the program run:
 or
 
 ./ssim-cpp listofimages.txt (2 filenames per line, separated by one space)
+
+To obtain source code run in Terminal:
+
+git clone https://github.com/grevutiu-gabriel/ssim-cpp.git
