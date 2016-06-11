@@ -10,6 +10,7 @@
  * The original work may be under copyrights. 
  */
 
+#include <omp.h>
 #include <cv.h>
 #include <highgui.h>
 #include <fstream>
@@ -489,6 +490,8 @@ int main(int argc, char** argv)
 	}
 	else cout << "Unable to open file";
 	
+	//#pragma omp parallel for
+	#pragma omp parallel for schedule(dynamic)
 	for (i = 0; i < input.size(); i=i+2) {
 		if (i==0){	
 	cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
@@ -518,6 +521,7 @@ int main(int argc, char** argv)
 	randul_intermediar << input[i] <<" " << input[i+1] << " " << to_string_with_precision(index.val[0], 7);
 	std::string randul = randul_intermediar.str();
 	output.push_back(randul);
+	#pragma omp critical
 	std::cout << std::fixed << setprecision(0) << "Procesarea s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<"\r";
 	}
 	//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
