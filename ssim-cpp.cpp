@@ -491,7 +491,7 @@ int main(int argc, char** argv)
 	else cout << "Unable to open file";
 	
 	//#pragma omp parallel for
-	#pragma omp parallel for schedule(dynamic)
+	#pragma omp parallel for schedule(dynamic) private(i, name_previous_file)
 	for (i = 0; i < input.size(); i=i+2) {
 		if (i==0){	
 	cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
