@@ -522,7 +522,7 @@ int main(int argc, char** argv)
 	std::string randul = randul_intermediar.str();
 	output.push_back(randul);
 	#pragma omp critical
-	std::cout << std::fixed << setprecision(0) << "Procesarea s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<"\r";
+	std::cout << std::fixed << setprecision(0) << "Procesarea fisierului " << argv[1] <<" s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<endl;
 	}
 	//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
 	ofstream writeFile(strcat(argv[1],"-calculat"));
