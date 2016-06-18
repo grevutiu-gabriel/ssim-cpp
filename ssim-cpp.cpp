@@ -49,7 +49,7 @@ Scalar getMSSIM( cv::Mat img1_temp, cv::Mat img2_temp)
 	double delta = 0;
 	
 	int x=img1_temp.rows, y=img1_temp.cols;
-	int nChan=img1_temp.channels()-2, d=CV_32FC1;
+	//int nChan=img1_temp.channels()-2, d=CV_32FC1;
 		
 	cv::Mat img1_1 = cv::Mat( Size(x,y), CV_32FC3);
 	cv::Mat img2_2 = cv::Mat( Size(x,y), CV_32FC3);
@@ -184,7 +184,7 @@ std::tuple < cv::Scalar, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, c
 	double delta = 0;
 	
 	int x=img1_temp.rows, y=img1_temp.cols;
-	int nChan=img1_temp.channels()-2, d=CV_32FC1;
+	//int nChan=img1_temp.channels()-2, d=CV_32FC1;
 		
 	cv::Mat img1_1 = cv::Mat( Size(x,y), CV_32FC3);
 	cv::Mat img2_2 = cv::Mat( Size(x,y), CV_32FC3);
@@ -470,7 +470,7 @@ int main(int argc, char** argv)
 	}
 
 	if(argc==2){
-	int i;
+	unsigned int i;
 	Scalar index;
 	int x=1080, y=1920;
 	cv::Mat img1 = cv::Mat( Size(x,y), CV_32FC3);
