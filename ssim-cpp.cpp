@@ -458,8 +458,11 @@ int main(int argc, char** argv)
 		cv::Mat img1_temp = imread(argv[1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
 		cv::Mat img2_temp = imread(argv[2]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
 
-	//if(img1_temp==NULL || img2_temp==NULL)
-	//	return -1;
+	if((! img1_temp.data) || (! img2_temp.data )) // Check for invalid input
+	{
+        cout <<  "Could not open or find the image" << std::endl ;
+        return -1;
+	}
 
 	// through observation, there is approximately 
 	// 0,00085% error comparing with the original program
