@@ -491,7 +491,7 @@ int main(int argc, char** argv)
 	else cout << "Unable to open file";
 	
 	//#pragma omp parallel for
-	#pragma omp parallel for schedule(dynamic) private(i, name_previous_file)
+	#pragma omp parallel for schedule(dynamic) private(name_previous_file)
 	for (i = 0; i < input.size(); i=i+2) {
 		if (i==0){	
 	cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
@@ -511,6 +511,7 @@ int main(int argc, char** argv)
 	}
 	if ( ( input[i].compare(name_previous_file) == 0) && (i>0)){
 	cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+	#pragma omp parallel private (img2_temp, name_previous_file, index_scalar, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)
 	name_previous_file = input[i];
 	tie(index, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM2(index_scalar, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq);
 	
@@ -518,11 +519,13 @@ int main(int argc, char** argv)
 	cout.setf(std::ios::fixed, std:: ios::floatfield);	
 	//cout << input[i] << " " << input[i+1] << " " << setprecision(7) << index.val[0]<<endl ;
 	std::stringstream randul_intermediar;
+	#pragma omp critical
+	{
 	randul_intermediar << input[i] <<" " << input[i+1] << " " << to_string_with_precision(index.val[0], 7);
 	std::string randul = randul_intermediar.str();
 	output.push_back(randul);
-	#pragma omp critical
 	std::cout << std::fixed << setprecision(0) << "Procesarea fisierului " << argv[1] <<" s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<endl;
+	}
 	}
 	//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
 	ofstream writeFile(strcat(argv[1],"-calculat"));
