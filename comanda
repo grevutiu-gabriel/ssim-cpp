@@ -1,0 +1,2 @@
+paste -d- pyssim.txt ssim-cpp.txt | bc > diferenta.txt
+
