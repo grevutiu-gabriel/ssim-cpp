@@ -476,12 +476,14 @@ int main(int argc, char** argv)
 	unsigned int i;
 	Scalar index;
 	int x=1080, y=1920;
-	cv::Mat img1 = cv::Mat( Size(x,y), CV_32FC3);
+	//cv::Mat img1 = cv::Mat( Size(x,y), CV_32FC3);
 	cv::Mat img1_extern = cv::Mat( Size(x,y), CV_32FC3);
 	cv::Mat img1_sq;
 	cv::Mat mu1;
 	cv::Mat mu1_sq;
 	cv::Mat sigma1_sq;
+	cv::Mat img1_temp;
+	cv::Mat img2_temp;
 	std::string name_previous_file;
 	vector<string> input;
 	vector<string> output;
@@ -494,7 +496,7 @@ int main(int argc, char** argv)
 	else cout << "Unable to open file";
 	
 	//#pragma omp parallel for
-	#pragma omp parallel for schedule(dynamic) private(name_previous_file)
+	#pragma omp parallel for schedule(dynamic) private(name_previous_file, i, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq, index_scalar, index)
 	for (i = 0; i < input.size(); i=i+2) {
 		if (i==0){	
 	cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
@@ -514,7 +516,7 @@ int main(int argc, char** argv)
 	}
 	if ( ( input[i].compare(name_previous_file) == 0) && (i>0)){
 	cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-	#pragma omp parallel private (img2_temp, name_previous_file, index_scalar, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)
+	//#pragma omp parallel private (img2_temp, name_previous_file, index_scalar, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)
 	name_previous_file = input[i];
 	tie(index, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM2(index_scalar, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq);
 	
