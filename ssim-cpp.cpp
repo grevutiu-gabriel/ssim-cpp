@@ -30,6 +30,7 @@
 #include <sys/resource.h>
 #include <tuple>
 #include <iomanip>
+#include <getopt.h>
 using namespace std;
 using namespace cv;
 using namespace arma;
@@ -446,101 +447,153 @@ std::tuple < cv::Scalar, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat >g
 
 int main(int argc, char** argv)
 {
+	Scalar index_scalar;
+	int c;
+	const char    * short_opt = "hlf:";
+	struct option   long_opt[] =
+	{
+	{"help",          no_argument,       NULL, 'h'},
+	{"file",          required_argument, NULL, 'f'},
+	{"list",          required_argument, NULL, 'l'},
+	{NULL,            0,                 NULL, 0  }
+	};
+
+	while((c = getopt_long(argc, argv, short_opt, long_opt, NULL)) != -1)
+	{
+		switch(c)
+		{
+			case -1:       /* no more arguments */
+			case 0:        /* long options toggles */
+         		break;
+
+			case 'f':
+			// default settings
+			{
+			unsigned int i;
+			Scalar index;
+			int x=1080, y=1920;
+			//cv::Mat img1 = cv::Mat( Size(x,y), CV_32FC3);
+			cv::Mat img1_extern = cv::Mat( Size(x,y), CV_32FC3);
+			cv::Mat img1_sq;
+			cv::Mat mu1;
+			cv::Mat mu1_sq;
+			cv::Mat sigma1_sq;
+			cv::Mat img1_temp;
+			cv::Mat img2_temp;
+			std::string name_previous_file;
+			vector<string> input;
+			vector<string> output;
+			ifstream readFile(optarg);
+			if (readFile.is_open()){
+			copy(istream_iterator<string>(readFile), {}, back_inserter(input));
+			//cout << "Vector Size is now " << input.size() <<endl;
+			readFile.close();
+					}
+			else cout << "Unable to open file"<<endl;
+
+			//#pragma omp parallel for
+			#pragma omp parallel for schedule(dynamic) private(name_previous_file, i, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq, index_scalar, index)
+			for (i = 0; i < input.size(); i=i+2) {
+				if (i==0){	
+			cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+			cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+			name_previous_file = input[i];
+		
+			tie(index, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM1(index_scalar, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq);
+			}
+	
+			if ( ( input[i].compare(name_previous_file) != 0) && (i>0)) {
+			cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+			cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+			name_previous_file = input[i];
+
+			tie(index, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM1(index_scalar, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq);
+
+			}
+			if ( ( input[i].compare(name_previous_file) == 0) && (i>0)){
+			cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+			//#pragma omp parallel private (img2_temp, name_previous_file, index_scalar, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)
+			name_previous_file = input[i];
+			tie(index, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM2(index_scalar, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq);
+	
+			}
+			cout.setf(std::ios::fixed, std:: ios::floatfield);	
+			//cout << input[i] << " " << input[i+1] << " " << setprecision(7) << index.val[0]<<endl ;
+			std::stringstream randul_intermediar;
+			#pragma omp critical
+			{
+			randul_intermediar << input[i] <<" " << input[i+1] << " " << to_string_with_precision(index.val[0], 7);
+			std::string randul = randul_intermediar.str();
+			output.push_back(randul);
+			std::cout << std::fixed << setprecision(0) << "Procesarea fisierului " << optarg <<" s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<endl;
+			}
+			}
+			//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
+			ofstream writeFile(strcat(optarg,"-calculat"));
+			if (writeFile.is_open())
+		  	{
+			copy(output.begin(), output.end(), ostream_iterator<string>(writeFile, "\n"));
+			writeFile.close();
+		  	}
+			else cout << "Unable to open file";
+			break;
+			};
+			
+			case 'l':
+			{
+			if (optind < argc && *argv[optind] != '-'){
+			cv::Mat img1_temp = imread(argv[optind]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+			cv::Mat img2_temp = imread(argv[optind+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
+
+			if((! img1_temp.data) && (! img2_temp.data )) // Check for invalid input
+			{
+			cout <<  "Could not open or find the image" << std::endl ;
+			return -1;
+			}
+
+			// through observation, there is approximately 
+			// 0,00085% error comparing with the original program
+			index_scalar=getMSSIM( img1_temp, img2_temp);
+
+			cout.setf(std::ios::fixed, std:: ios::floatfield);
+			cout << setprecision(7) << index_scalar.val[0] <<endl ;
+			} else {
+			fprintf(stderr, "\n-l option require TWO arguments <image1> "
+			"<image2>\n\n");
+			};
+			break;
+			};
+
+			case 'h':
+			{
+			printf("Usage: %s [OPTIONS]\n", argv[0]);
+			printf("  -f file            file with name of two images, per row, for processing\n");
+			printf("  -l list            list of two files\n");
+			printf("  -h, --help         print this help and exit\n");
+			printf("\n");
+			return(0);
+			};
+
+			case ':':
+			case '?':
+			fprintf(stderr, "Try `%s --help' for more information.\n", argv[0]);
+			return(-2);
+
+			default:
+			{
+			fprintf(stderr, "%s: invalid option -- %c\n", argv[0], c);
+			fprintf(stderr, "Try `%s --help' for more information.\n", argv[0]);
+			return(-2);
+			}
+		};
+	};
+
 	//if(argc!=3)
 	//	return -1;
 
-	// default settings
-	Scalar index_scalar;
+	
 	
 	/***************************** INITS **********************************/
-
-	if(argc==3){
-		cv::Mat img1_temp = imread(argv[1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-		cv::Mat img2_temp = imread(argv[2]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-
-	if((! img1_temp.data) || (! img2_temp.data )) // Check for invalid input
-	{
-        cout <<  "Could not open or find the image" << std::endl ;
-        return -1;
-	}
-
-	// through observation, there is approximately 
-	// 0,00085% error comparing with the original program
-	index_scalar=getMSSIM( img1_temp, img2_temp);
-
-	cout.setf(std::ios::fixed, std:: ios::floatfield);	
-	cout << setprecision(7) << index_scalar.val[0] <<endl ;
-	}
-
-	if(argc==2){
-	unsigned int i;
-	Scalar index;
-	int x=1080, y=1920;
-	//cv::Mat img1 = cv::Mat( Size(x,y), CV_32FC3);
-	cv::Mat img1_extern = cv::Mat( Size(x,y), CV_32FC3);
-	cv::Mat img1_sq;
-	cv::Mat mu1;
-	cv::Mat mu1_sq;
-	cv::Mat sigma1_sq;
-	cv::Mat img1_temp;
-	cv::Mat img2_temp;
-	std::string name_previous_file;
-	vector<string> input;
-	vector<string> output;
-	ifstream readFile(argv[1]);
-	if (readFile.is_open()){
-	copy(istream_iterator<string>(readFile), {}, back_inserter(input));
-	//cout << "Vector Size is now " << input.size() <<endl;
-	readFile.close();
-	}
-	else cout << "Unable to open file";
-	
-	//#pragma omp parallel for
-	#pragma omp parallel for schedule(dynamic) private(name_previous_file, i, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq, index_scalar, index)
-	for (i = 0; i < input.size(); i=i+2) {
-		if (i==0){	
-	cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-	cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-	name_previous_file = input[i];
-		
-	tie(index, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM1(index_scalar, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq);
-	}
-	
-	if ( ( input[i].compare(name_previous_file) != 0) && (i>0)) {
-	cv::Mat img1_temp = imread(input[i]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-	cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-	name_previous_file = input[i];
-
-	tie(index, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM1(index_scalar, img1_temp, img2_temp, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq);
-
-	}
-	if ( ( input[i].compare(name_previous_file) == 0) && (i>0)){
-	cv::Mat img2_temp = imread(input[i+1]/*, CV_LOAD_IMAGE_GRAYSCALE*/);
-	//#pragma omp parallel private (img2_temp, name_previous_file, index_scalar, img1_extern, img1_sq, mu1, mu1_sq, sigma1_sq)
-	name_previous_file = input[i];
-	tie(index, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq)=getMSSIM2(index_scalar, img1_extern, img2_temp, img1_sq, mu1, mu1_sq, sigma1_sq);
-	
-	}
-	cout.setf(std::ios::fixed, std:: ios::floatfield);	
-	//cout << input[i] << " " << input[i+1] << " " << setprecision(7) << index.val[0]<<endl ;
-	std::stringstream randul_intermediar;
-	#pragma omp critical
-	{
-	randul_intermediar << input[i] <<" " << input[i+1] << " " << to_string_with_precision(index.val[0], 7);
-	std::string randul = randul_intermediar.str();
-	output.push_back(randul);
-	std::cout << std::fixed << setprecision(0) << "Procesarea fisierului " << argv[1] <<" s-a efectuat in proportie de: "<<i/double(input.size())*100<<"%"<<endl;
-	}
-	}
-	//copy(output.begin(), output.end(), ostream_iterator<string>(cout << setprecision(7), "\n"));
-	ofstream writeFile(strcat(argv[1],"-calculat"));
-	if (writeFile.is_open())
-  	{
-	copy(output.begin(), output.end(), ostream_iterator<string>(writeFile, "\n"));
-	writeFile.close();
-  	}
-	else cout << "Unable to open file";
-	}
 
 	return 0;
 }
